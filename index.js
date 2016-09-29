@@ -16,7 +16,8 @@ module.exports = postcss.plugin('postcss-partial-import', function (opts) {
 		generate:  false,
 		plugins:   [],
 		prefix:    '_',
-		addDependencyTo: false
+		addDependencyTo: false,
+		resolve: null
 	}, opts);
 
 	if (!Array.isArray(opts.dirs)) {
@@ -82,17 +83,29 @@ module.exports = postcss.plugin('postcss-partial-import', function (opts) {
 	var transformImport = function (atRule, link, media, dir) {
 		// Promise to read a local CSS file (placeholder)
 		var localPromise = Promise.reject();
+		var resolvedPath = null;
 
-		// For each possible directory (starting with the current)
-		[dir].concat(opts.dirs).forEach(function (localdir) {
-			// File relative to the local directory
-			var localfile = getPath(path.resolve(localdir, link), opts.prefix, opts.extension);
+		if (opts.resolve && typeof opts.resolve === 'function') {
+			resolvedPath = opts.resolve(link, dir, opts, getPath);
+			if (resolvedPath) {
+				localPromise = localPromise.catch(function () {
+					return readCSS(resolvedPath, opts.encoding, processor);
+				});
+			}
+		}
 
-			// Promise the local CSS file is processed
-			localPromise = localPromise.catch(function () {
-				return readCSS(localfile, opts.encoding, processor);
+		if (!resolvedPath) {
+			// For each possible directory (starting with the current)
+			[dir].concat(opts.dirs).forEach(function (localdir) {
+				// File relative to the local directory
+				var localfile = getPath(path.resolve(localdir, link), opts.prefix, opts.extension);
+
+				// Promise the local CSS file is processed
+				localPromise = localPromise.catch(function () {
+					return readCSS(localfile, opts.encoding, processor);
+				});
 			});
-		});
+		}
 
 		// Promise the NPM package is processed
 		var npmPromise = localPromise.catch(function () {
@@ -103,7 +116,7 @@ module.exports = postcss.plugin('postcss-partial-import', function (opts) {
 		var generateLocalPromise = npmPromise.catch(function () {
 			if (opts.generate) {
 				// File relative to the local directory
-				var localfile = getPath(path.resolve(dir, link), opts.prefix, opts.extension);
+				var localfile = resolvedPath || getPath(path.resolve(dir, link), opts.prefix, opts.extension);
 
 				return makeCSS(localfile, processor);
 			}

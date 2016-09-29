@@ -172,6 +172,18 @@ postcss: function(webpack) {
 }
 ```
 
+#### `resolve`
+
+Type: `function`
+Default: `null`
+
+Overrides the default function for resolving paths. The function will fall back to the default resolving behaviour if nothing is returned. The function will receive four arguments:
+
+* `id`: The path to be imported
+* `baseDir`: The base directory of the imported file
+* `options`: All options passed in to the plugin
+* `resolve`: The default resolving function
+
 [ci]:      https://travis-ci.org/jonathantneal/postcss-partial-import
 [ci-img]:  https://img.shields.io/travis/jonathantneal/postcss-partial-import.svg
 [npm]:     https://www.npmjs.com/package/postcss-partial-import
